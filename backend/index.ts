@@ -21,7 +21,7 @@ app.use(
 );
 
 // Connect to MongoDB
-connectToMongo();
+// connectToMongo();
 app.use(express.json());
 
 // Setup Routes
@@ -34,5 +34,6 @@ app.get("/", (req, res) => {
 
 // Start the Server
 app.listen(port, () => {
+  connectToMongo();
   console.log(`Server is running on http://localhost:${port}`);
 });
