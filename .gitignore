@@ -50,9 +50,6 @@ Thumbs.db
 
 # Project specific
 /uploads
-*.h5
-/backend/ml/model/*.h5
-repomix-output.txt
 
 # TypeScript
 *.tsbuildinfo

@@ -38,8 +38,6 @@ Thumbs.db
 
 # Project specific
 /backend/uploads
-*.h5
-/backend/ml/model/*.h5
 
 # Debug logs
 npm-debug.log*
