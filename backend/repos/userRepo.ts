@@ -1,22 +1,23 @@
-import {User, validateUser} from "../models/user.js";
+import { User, validateUser } from "../models/user.js";
 import Joi from "joi";
 import bcrypt from "bcryptjs";
-const {hash, genSalt, compare} = bcrypt;
+const { hash, genSalt, compare } = bcrypt;
 import _ from "lodash";
 
 export const login = async (req, res) => {
-  const {error} = validate(req.body);
-  if (error) return res.status(400).json({error: error.details[0].message});
+  const { error } = validate(req.body);
+  if (error) return res.status(400).json({ error: error.details[0].message });
 
-  let user = await User.findOne({email: req.body.email});
-  if (!user) return res.status(400).json({error: "Invalid email or password."});
+  let user = await User.findOne({ email: req.body.email });
+  if (!user)
+    return res.status(400).json({ error: "Invalid email or password." });
 
   if (!user.password)
-    return res.status(400).json({error: "Invalid email or password."});
+    return res.status(400).json({ error: "Invalid email or password." });
 
   const validPassword = await compare(req.body.password, user.password);
   if (!validPassword)
-    return res.status(400).json({error: "Invalid email or password."});
+    return res.status(400).json({ error: "Invalid email or password." });
 
   const token = user.generateAuthToken();
 
@@ -36,10 +37,10 @@ export const login = async (req, res) => {
 };
 
 export const register = async (req, res) => {
-  const {error} = validateUser(req.body);
+  const { error } = validateUser(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let user = await User.findOne({email: req.body.email});
+  let user = await User.findOne({ email: req.body.email });
   if (user) return res.status(400).send("User already registered.");
 
   user = new User(
@@ -64,6 +65,53 @@ export const register = async (req, res) => {
       "mood",
     ]),
   });
+};
+
+// In backend/repos/userRepo.ts
+export const updateMe = async (req, res) => {
+  try {
+    const { foodCategory, update } = req.body;
+
+    // Validate the update
+    if (!foodCategory || !update) {
+      return res.status(400).json({ error: "Invalid update data" });
+    }
+
+    // Find and update the user
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Update health points and mood
+    if (update.healthPoints) {
+      user.healthPoints = Math.min(
+        100,
+        Math.max(0, user.healthPoints + update.healthPoints)
+      );
+    }
+    if (update.mood) {
+      user.mood = update.mood;
+    }
+
+    await user.save();
+
+    // Return updated user
+    return res.status(200).json({
+      user: _.pick(user, [
+        "_id",
+        "firstName",
+        "lastName",
+        "email",
+        "petName",
+        "healthPoints",
+        "mood",
+      ]),
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return res.status(500).json({ error: "Failed to update user" });
+  }
 };
 
 export const getMe = async (req, res) => {
@@ -91,5 +139,5 @@ function validate(req) {
 }
 
 export const test = (req, res) => {
-  return res.status(200).json({message: "Test route"});
+  return res.status(200).json({ message: "Test route" });
 };

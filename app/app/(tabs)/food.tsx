@@ -57,8 +57,7 @@ const Food = () => {
       setIsLoading(true);
       const endpoint = `${API_URL}ml/predict`;
       console.log("Sending request to:", endpoint);
-      console.log("API URL:", process.env.EXPO_PUBLIC_API_URL);
-      // Create form data
+
       const formData = new FormData();
       formData.append("image", {
         uri: uri,
@@ -77,22 +76,19 @@ const Food = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        if (errorText.includes("File too large")) {
-          throw new Error(
-            "Image file is too large. Please try taking another photo."
-          );
-        }
-        throw new Error(`Server error: ${response.status}`);
+        console.error("ML Prediction failed:", errorText);
+        throw new Error(`ML Prediction failed: ${response.status}`);
       }
 
       const result = await response.json();
       setPrediction(result.category);
       setConfidence(result.confidence);
 
-      // Get token from storage (you might need to import AsyncStorage)
       const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        throw new Error("No auth token found");
+      }
 
-      // Update user state based on food category
       const updateEndpoint = `${API_URL}auth/me`;
       const updateResponse = await fetch(updateEndpoint, {
         method: "PUT",
@@ -114,18 +110,22 @@ const Food = () => {
                 ? "happy"
                 : result.category === "junk_food"
                 ? "sad"
-                : undefined,
+                : "neutral",
           },
         }),
       });
 
       if (!updateResponse.ok) {
+        const updateErrorText = await updateResponse.text();
+        console.error("Update user failed:", updateErrorText);
         throw new Error("Failed to update user state");
       }
 
+      const updateResult = await updateResponse.json();
+      console.log("User update result:", updateResult);
+
       await updateArduinoState();
 
-      // Show feedback to user
       Alert.alert(
         "Food Detected!",
         result.category === "food"
@@ -138,7 +138,9 @@ const Food = () => {
       console.error("Error processing image:", error);
       Alert.alert(
         "Error",
-        error.message || "Failed to process image. Please try again."
+        error instanceof Error
+          ? error.message
+          : "Failed to process image. Please try again."
       );
     } finally {
       setIsLoading(false);
