@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon --watch . --ext ts --exec 'tsx --require dotenv/config index.ts'"
+    "dev": "nodemon --watch . --ext ts --exec 'tsx --require dotenv/config index.ts'",
+    "test:llm": "tsx tests/llm-test.ts"
   },
   "author": "",
   "license": "ISC",
