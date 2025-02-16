@@ -7,7 +7,7 @@ const router = Router();
 // ✅ Get all todos for the logged-in user
 router.get("/", auth, async (req, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id; // `req.user` is ensured by middleware
+    const userId = req.user?._id; // `req.user` is ensured by middleware
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -23,7 +23,7 @@ router.get("/", auth, async (req, res: Response): Promise<void> => {
 // ✅ Get a specific todo
 router.get("/:id", auth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?._id;
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -44,7 +44,7 @@ router.get("/:id", auth, async (req: Request, res: Response): Promise<void> => {
 // ✅ Create a new todo
 router.post("/", auth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?._id;
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -66,7 +66,7 @@ router.post("/", auth, async (req: Request, res: Response): Promise<void> => {
 // ✅ Update a todo's completed status
 router.put("/:id", auth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?._id;
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -90,7 +90,7 @@ router.put("/:id", auth, async (req: Request, res: Response): Promise<void> => {
 // ✅ Delete a todo
 router.delete("/:id", auth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?._id;
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
