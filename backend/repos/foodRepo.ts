@@ -67,7 +67,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024,
   },
 });
 
@@ -77,16 +77,16 @@ export async function processFoodFile(file: MulterFile) {
   const result = await fetch("http://localhost:4000/api/ml/classify", {
     method: "POST",
     body: JSON.stringify({
-      argument: file.path
+      argument: file.path,
     }),
     headers: {
-      "Content-Type": "application/json"
-    }
+      "Content-Type": "application/json",
+    },
   });
 
   const data = await result.json();
 
   return {
-    data
+    data,
   };
 }
