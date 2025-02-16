@@ -21,22 +21,21 @@ const Food = () => {
   const [prediction, setPrediction] = useState<string | null>(null);
   const [confidence, setConfidence] = useState<number | null>(null);
 
-  const pickImage = async () => {
+  const takePhoto = async () => {
     try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "Sorry, we need camera roll permissions to make this work!"
-        );
+        Alert.alert("Sorry, we need camera permissions to make this work!");
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 0.5, // Reduce quality to decrease file size
+        maxWidth: 1000, // Limit maximum width
+        maxHeight: 1000, // Limit maximum height
       });
 
       if (!result.canceled) {
@@ -44,8 +43,8 @@ const Food = () => {
         await processImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to pick image");
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "Failed to take photo");
     }
   };
 
@@ -63,18 +62,6 @@ const Food = () => {
         name: "image.jpg",
       } as any);
 
-      // Log the request details
-      console.log("Request details:", {
-        url: endpoint,
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "multipart/form-data",
-        },
-        body: formData,
-      });
-
-      // Send to backend for processing
       const response = await fetch(endpoint, {
         method: "POST",
         body: formData,
@@ -84,24 +71,25 @@ const Food = () => {
         },
       });
 
-      // Log the response status
-      console.log("Response status:", response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Error response:", errorText);
-        throw new Error(
-          `HTTP error! status: ${response.status}, message: ${errorText}`
-        );
+        if (errorText.includes("File too large")) {
+          throw new Error(
+            "Image file is too large. Please try taking another photo."
+          );
+        }
+        throw new Error(`Server error: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log("Prediction result:", result);
       setPrediction(result.category);
       setConfidence(result.confidence);
     } catch (error) {
       console.error("Error processing image:", error);
-      Alert.alert("Error", `Failed to process image: ${error.message}`);
+      Alert.alert(
+        "Error",
+        error.message || "Failed to process image. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +99,7 @@ const Food = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Food Detector</Text>
 
-      <Button title="Pick an image" onPress={pickImage} />
+      <Button title="Take a Photo" onPress={takePhoto} />
 
       {isLoading && (
         <View style={styles.loadingContainer}>
