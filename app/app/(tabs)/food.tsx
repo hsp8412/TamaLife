@@ -1,5 +1,5 @@
 // app/(tabs)/food.tsx
-import React, {useState} from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import {MaterialIcons} from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
+import { updateArduinoState } from "@/services/stateService";
 
 const CATEGORIES = ["non_food", "food", "junk_food"];
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -23,7 +24,7 @@ const Food = () => {
 
   const takePhoto = async () => {
     try {
-      const {status} = await ImagePicker.requestCameraPermissionsAsync();
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Sorry, we need camera permissions to make this work!");
         return;
@@ -84,6 +85,7 @@ const Food = () => {
       const result = await response.json();
       setPrediction(result.category);
       setConfidence(result.confidence);
+      await updateArduinoState();
     } catch (error) {
       console.error("Error processing image:", error);
       Alert.alert(
@@ -110,7 +112,7 @@ const Food = () => {
 
       {image && (
         <View style={styles.imageContainer}>
-          <Image source={{uri: image}} style={styles.image} />
+          <Image source={{ uri: image }} style={styles.image} />
           {prediction && (
             <View style={styles.predictionContainer}>
               <MaterialIcons
