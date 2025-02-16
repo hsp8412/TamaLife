@@ -1,5 +1,6 @@
 import toastService from "@/services/toastService";
-import {createContext, ReactNode, useEffect, useState} from "react";
+import { addTask, completeTask, getTasks } from "@/services/todoService";
+import { createContext, ReactNode, useEffect, useState } from "react";
 
 type IToDoContext = {
   todos: Todo[];
@@ -15,81 +16,69 @@ export const ToDoContext = createContext<IToDoContext>({
   completeTodo: () => {},
 });
 
-export const ToDoProvider = ({children}: {children: ReactNode}) => {
+export const ToDoProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
+  const [todos, setTodos] = useState<Todo[]>([]);
 
   useEffect(() => {
     const fetchTodos = async () => {
+      const data = getTasks();
       setLoading(false);
     };
     fetchTodos();
   }, []);
 
-  const [todos, setTodos] = useState([
-    {
-      _id: "1",
-      userId: "123",
-      description: "Brush my teeth",
-      completed: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      _id: "2",
-      userId: "123",
-      description: "Brush my teeth",
-      completed: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      _id: "3",
-      userId: "123",
-      description: "Brush my teeth",
-      completed: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ]);
-
   const addTodo = async (todo: string) => {
     // api call
-    setTodos((todos) => {
-      return [
-        ...todos,
-        {
-          _id: new Date().toString(),
-          userId: "123",
-          description: todo,
-          completed: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ];
-    });
-    toastService.success(
-      "To-do added!",
-      "Complete it to improve your pet's mood"
-    );
+    try {
+      const task = await addTask(todo);
+      setTodos((todos) => {
+        return [
+          ...todos,
+          task,
+          // {
+          //   _id: task._id,
+          //   userId: task.userId,
+          //   description: task.decription,
+          //   completed: task.completed,
+          //   createdAt: task.create
+          //   updatedAt: new Date(),
+          // },
+        ];
+      });
+      toastService.success(
+        "To-do added!",
+        "Complete it to improve your pet's mood"
+      );
+    } catch (e: any) {
+      console.log(e);
+      toastService.error("Error", "Failed to add a new to-do");
+    }
   };
 
   // Function to mark a todo as completed
   const completeTodo = async (todoId: string) => {
-    setTodos((prevTodos) =>
-      prevTodos.map((todo) =>
-        todo._id === todoId
-          ? {...todo, completed: true, updatedAt: new Date()}
-          : todo
-      )
-    );
-    toastService.success(
-      "To-do completed!",
-      "Your pet's mood has been improved"
-    );
+    console.log(todoId);
+    try {
+      await completeTask(todoId);
+      setTodos((prevTodos) =>
+        prevTodos.map((todo) =>
+          todo._id === todoId
+            ? { ...todo, completed: true, updatedAt: new Date() }
+            : todo
+        )
+      );
+      toastService.success(
+        "To-do completed!",
+        "Your pet's mood has been improved"
+      );
+    } catch (e: any) {
+      toastService.error("Error", "Failed to complete a to-do");
+    }
   };
 
   return (
-    <ToDoContext.Provider value={{todos, addTodo, completeTodo, loading}}>
+    <ToDoContext.Provider value={{ todos, addTodo, completeTodo, loading }}>
       {children}
     </ToDoContext.Provider>
   );
