@@ -5,6 +5,7 @@ import {connectToMongo} from "./startup/db.js";
 import express from "express";
 import setupRoutes from "./startup/routes.js";
 import cors from "cors";
+import startCronJobs from "./cron/cronJob.js";
 
 console.log(process.env.MONGO_URI);
 console.log(process.env.FRONTEND_URL);
@@ -35,5 +36,6 @@ app.get("/", (req, res) => {
 // Start the Server
 app.listen(port, () => {
   connectToMongo();
+  startCronJobs();
   console.log(`Server is running on http://localhost:${port}`);
 });
