@@ -73,6 +73,35 @@ npm run dev
 npm start
 ```
 
+### Datasets 📊
+
+The project utilizes two major datasets for training the food classification model:
+
+#### Food-101
+- 101 food categories
+- 1000 images per class
+- Used for training food/junk food classification
+- High-quality, real-world food images
+- Source: [Food-101](https://data.vision.ee.ethz.ch/cvl/datasets_extra/food-101/)
+
+#### Food-5K
+- Binary classification dataset (food/non-food)
+- 2500 food images
+- 2500 non-food images
+- Training, validation, and evaluation splits
+- Source: [Food-5K](https://mmspg.epfl.ch/downloads/food-image-datasets/)
+
+The datasets were combined and reorganized into three categories:
+- Non-food (from Food-5K)
+- Healthy food (selected from Food-101)
+- Junk food (selected from Food-101)
+
+Data split:
+- Training: 70%
+- Validation: 15%
+- Testing: 15%
+
+
 ## Hardware Setup 🔧
 Ensure proper serial port configuration in backend settings
 
