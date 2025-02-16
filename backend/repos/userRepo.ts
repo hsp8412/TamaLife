@@ -29,6 +29,8 @@ export const login = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       petName: user.petName,
+      healthPoints: user.healthPoints,
+      mood: user.mood,
     },
   });
 };
@@ -48,14 +50,34 @@ export const register = async (req, res) => {
   await user.save();
 
   const token = user.generateAuthToken();
-  res
-    .header("x-auth-token", token)
-    .send(_.pick(user, ["_id", "firstName", "lastName", "email", "petName"]));
 
   return res.status(201).json({
     message: "Registration successful",
     token,
-    user: _.pick(user, ["_id", "firstName", "lastName", "email", "petName"]),
+    user: _.pick(user, [
+      "_id",
+      "firstName",
+      "lastName",
+      "email",
+      "petName",
+      "healthPoints",
+      "mood",
+    ]),
+  });
+};
+
+export const getMe = async (req, res) => {
+  const user = await User.findById(req.user._id).select("-password");
+  return res.status(200).json({
+    user: _.pick(user, [
+      "_id",
+      "firstName",
+      "lastName",
+      "email",
+      "petName",
+      "healthPoints",
+      "mood",
+    ]),
   });
 };
 
