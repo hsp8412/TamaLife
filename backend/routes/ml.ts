@@ -59,9 +59,11 @@ const fileFilter = (
 };
 
 const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 20 * 1024 * 1024,
+  },
 });
 
 const router = express.Router();
