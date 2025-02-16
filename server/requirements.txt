@@ -1,7 +1,0 @@
-flask
-flask-pymongo
-python-dotenv
-PyJWT
-flask-bcrypt
-pathlib
-motor
