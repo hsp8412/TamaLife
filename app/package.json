@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start --tunnel",
+    "start": "expo start --tunnel -c",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -40,7 +40,6 @@
     "expo-haptics": "~14.0.1",
     "expo-image-picker": "^16.0.6",
     "expo-image-manipulator": "~13.0.6",
-    "expo-image-picker": "~16.0.6",
     "expo-linking": "~7.0.5",
     "expo-router": "~4.0.17",
     "expo-splash-screen": "~0.29.22",

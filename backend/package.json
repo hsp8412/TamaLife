@@ -25,7 +25,6 @@
     "axios": "^1.7.9",
     "expo": "~52.0.0",
     "expo-blur": "~12.9.0",
-    "expo-camera": "~13.6.0",
     "expo-constants": "~14.4.0",
     "expo-file-system": "~15.4.0",
     "expo-font": "~11.10.0",
