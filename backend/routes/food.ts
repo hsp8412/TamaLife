@@ -15,6 +15,8 @@ router.post("/", singleFoodUpload, (req: Request, res: Response) => {
 
     // Process the uploaded file
     console.log("Processing file...");
+    console.log("File size:", req.file.size);
+    console.log("File path:", req.file);
     const processedFile = processFoodFile(req.file);
     console.log("Processed file result:", processedFile);
 

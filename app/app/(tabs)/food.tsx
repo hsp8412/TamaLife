@@ -54,7 +54,8 @@ export default function FoodScreen() {
         type: 'image/jpeg'
       } as any);
 
-      const response = await fetch('http://localhost:4000/food/', {
+      console.log('Sending form data:', formData);
+      const response = await fetch('http://172.20.10.14:4000/api/food/', {
         method: 'POST',
         headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,
