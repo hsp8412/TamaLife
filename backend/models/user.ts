@@ -4,15 +4,12 @@ import jwt from "jsonwebtoken";
 
 interface IUserDocument extends mongoose.Document {
   firstName: string;
-
   lastName: string;
-
   email: string;
-
   password: string;
-
   petName: string;
-
+  healthPoints: number;
+  mood: "happy" | "sad" | "neutral";
   generateAuthToken(): string;
 }
 
@@ -43,8 +40,17 @@ const userSchema = new mongoose.Schema<IUserDocument>({
   petName: {
     type: String,
     required: true,
-    minlength: 5,
+    minlength: 1,
     maxlength: 255,
+  },
+  healthPoints: {
+    type: Number,
+    default: 100,
+  },
+  mood: {
+    type: String,
+    enum: ["happy", "sad", "neutral"],
+    default: "neutral",
   },
 });
 
@@ -69,7 +75,7 @@ export function validateUser(user) {
     lastName: Joi.string().max(50).required(),
     email: Joi.string().min(5).max(255).required().email(),
     password: Joi.string().min(5).max(255).required(),
-    petName: Joi.string().min(5).max(255).required(),
+    petName: Joi.string().min(1).max(255).required(),
   });
   return schema.validate(user);
 }
