@@ -1,9 +1,11 @@
+// backend/routes/ml.ts
 import express, { Request, Response } from "express";
 import { spawn } from "child_process";
 import path from "path";
 import multer from "multer";
 import { fileURLToPath } from "url";
 import fs from "fs/promises";
+import fsSync from "fs"; // Add this import for synchronous file operations
 
 // Types
 interface ClassificationResult {
@@ -19,13 +21,24 @@ interface ErrorResponse {
   details?: unknown;
 }
 
-// Configuration
+interface ModelMetadata {
+  version: string;
+  size: number;
+  lastModified: string;
+  inputShape: number[];
+  labels: string[];
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Multer configuration with file filtering and size limits
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, "../uploads");
+fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
+
+// Multer configuration
 const storage = multer.diskStorage({
-  destination: "uploads/",
+  destination: uploadsDir,
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     cb(null, `${uniqueSuffix}-${file.originalname}`);
@@ -38,7 +51,6 @@ const fileFilter = (
   cb: multer.FileFilterCallback
 ) => {
   const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
-
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -47,59 +59,97 @@ const fileFilter = (
 };
 
 const upload = multer({
-  storage,
-  fileFilter,
+  storage: storage,
+  fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 20 * 1024 * 1024,
   },
 });
 
 const router = express.Router();
 
-// Helper function to run Python script
-const runPythonScript = async (
-  scriptPath: string,
-  args: string[] = []
-): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const pythonProcess = spawn("python", [scriptPath, ...args]);
-    let result = "";
-    let errorOutput = "";
+// Serve TFLite model
+router.get("/model", async (req: Request, res: Response) => {
+  const modelPath = path.join(__dirname, "../ml/model/model_latest.tflite");
 
-    pythonProcess.stdout.on("data", (data) => {
-      result += data.toString();
+  try {
+    // Check if file exists
+    const exists = await fs
+      .access(modelPath)
+      .then(() => true)
+      .catch(() => false);
+
+    if (!exists) {
+      console.error("Model file not found at:", modelPath);
+      return res.status(404).json({ error: "Model file not found" });
+    }
+
+    // Get file stats
+    const stats = await fs.stat(modelPath);
+    console.log("Serving model file:", {
+      path: modelPath,
+      size: stats.size,
     });
 
-    pythonProcess.stderr.on("data", (data) => {
-      errorOutput += data.toString();
-    });
+    // Set appropriate headers
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Length", stats.size);
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=model_latest.tflite"
+    );
 
-    pythonProcess.on("close", (code) => {
-      if (code === 0) {
-        resolve(result);
-      } else {
-        reject(
-          new Error(`Python script failed with code ${code}: ${errorOutput}`)
-        );
+    // Create read stream using synchronous fs
+    const fileStream = fsSync.createReadStream(modelPath);
+
+    // Handle stream errors
+    fileStream.on("error", (error) => {
+      console.error("Stream error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: "Failed to stream model",
+          details: error.message,
+        });
       }
     });
 
-    pythonProcess.on("error", (error) => {
-      reject(error);
-    });
-  });
-};
-
-// Cleanup function for uploaded files
-const cleanupFile = async (filePath: string): Promise<void> => {
-  try {
-    await fs.unlink(filePath);
+    // Pipe the file to response
+    fileStream.pipe(res);
   } catch (error) {
-    console.error(`Failed to cleanup file ${filePath}:`, error);
+    console.error("Error serving model:", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "Failed to serve model",
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
-};
+});
 
-// Routes
+// Get model metadata
+router.get("/model/metadata", async (req: Request, res: Response) => {
+  const modelPath = path.join(__dirname, "../ml/model/model_latest.tflite");
+
+  try {
+    const stats = await fs.stat(modelPath);
+    const metadata: ModelMetadata = {
+      version: "1.0.0",
+      size: stats.size,
+      lastModified: stats.mtime.toISOString(),
+      inputShape: [1, 224, 224, 3],
+      labels: ["non_food", "food", "junk_food"],
+    };
+
+    res.json(metadata);
+  } catch (error) {
+    res.status(500).json({
+      error: "Failed to get model metadata",
+      details: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+// Your existing predict endpoint for server-side processing
 router.post(
   "/predict",
   upload.single("image"),
@@ -107,16 +157,27 @@ router.post(
     req: Request,
     res: Response<ClassificationResult | ErrorResponse>
   ): Promise<void> => {
+    console.log("Received prediction request");
+
     if (!req.file) {
+      console.log("No file received in request");
       res.status(400).json({ error: "No image provided" });
       return;
     }
 
+    console.log("Received file:", {
+      filename: req.file.filename,
+      path: req.file.path,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+    });
+
     try {
-      const result = await runPythonScript(
-        path.join(__dirname, "../ml/src/api.py"),
-        [req.file.path]
-      );
+      const scriptPath = path.join(__dirname, "../ml/src/api.py");
+      console.log("Python script path:", scriptPath);
+
+      const result = await runPythonScript(scriptPath, [req.file.path]);
+      console.log("Python script result:", result);
 
       const classification: ClassificationResult = JSON.parse(result);
       res.json(classification);
@@ -127,7 +188,6 @@ router.post(
         details: error instanceof Error ? error.message : String(error),
       });
     } finally {
-      // Cleanup uploaded file
       if (req.file) {
         await cleanupFile(req.file.path);
       }
@@ -135,43 +195,74 @@ router.post(
   }
 );
 
-router.get(
-  "/training-info",
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const result = await runPythonScript(
-        path.join(__dirname, "../ml/src/test_api.py")
-      );
+const runPythonScript = async (
+  scriptPath: string,
+  args: string[] = []
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    console.log("Running Python script:", {
+      scriptPath,
+      args,
+      cwd: process.cwd(),
+    });
 
-      const info = JSON.parse(result);
-      res.json(info);
-    } catch (error) {
-      console.error("Training info error:", error);
-      res.status(500).json({
-        error: "Could not get training info",
-        details: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-);
+    const pythonCommand = process.platform === "darwin" ? "python3" : "python";
+    const pythonProcess = spawn(pythonCommand, [scriptPath, ...args], {
+      cwd: process.cwd(),
+    });
 
-// Error handling middleware
-router.use(
-  (error: Error, req: Request, res: Response, next: express.NextFunction) => {
-    console.error("ML Router Error:", error);
+    let result = "";
+    let errorOutput = "";
 
-    if (error instanceof multer.MulterError) {
-      if (error.code === "LIMIT_FILE_SIZE") {
-        res
-          .status(400)
-          .json({ error: "File size is too large. Maximum size is 5MB." });
-      } else {
-        res.status(400).json({ error: error.message });
+    pythonProcess.stdout.on("data", (data) => {
+      const output = data.toString();
+      console.log("Python stdout:", output);
+      // Only append if it looks like JSON
+      if (output.trim().startsWith("{")) {
+        result = output.trim();
       }
-    } else {
-      res.status(500).json({ error: "Internal server error" });
-    }
+    });
+
+    pythonProcess.stderr.on("data", (data) => {
+      const error = data.toString();
+      console.error("Python stderr:", error);
+      errorOutput += error;
+    });
+
+    pythonProcess.on("close", (code) => {
+      console.log("Python process closed with code:", code);
+
+      if (code === 0 && result) {
+        try {
+          // Verify it's valid JSON
+          JSON.parse(result);
+          resolve(result);
+        } catch (e) {
+          reject(new Error(`Invalid JSON output: ${result}`));
+        }
+      } else {
+        reject(
+          new Error(
+            `Python script failed with code ${code}: ${errorOutput || result}`
+          )
+        );
+      }
+    });
+
+    pythonProcess.on("error", (error) => {
+      console.error("Process spawn error:", error);
+      reject(error);
+    });
+  });
+};
+
+// Cleanup function
+const cleanupFile = async (filePath: string): Promise<void> => {
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    console.error(`Failed to cleanup file ${filePath}:`, error);
   }
-);
+};
 
 export default router;

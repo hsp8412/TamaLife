@@ -67,19 +67,26 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024,
   },
 });
 
 export const singleFoodUpload = upload.single("photo");
 
-export function processFoodFile(file: MulterFile) {
-  console.log("Processing file:", file);
+export async function processFoodFile(file: MulterFile) {
+  const result = await fetch("http://localhost:4000/api/ml/classify", {
+    method: "POST",
+    body: JSON.stringify({
+      argument: file.path,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await result.json();
+
   return {
-    message: "Image received and saved successfully!",
-    filename: file.filename,
-    path: file.path,
-    size: file.size,
-    mimetype: file.mimetype,
+    data,
   };
 }
