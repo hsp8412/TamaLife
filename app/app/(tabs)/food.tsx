@@ -1,4 +1,5 @@
 // app/(tabs)/food.tsx
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useState } from "react";
 import {
   View,
@@ -49,12 +50,14 @@ const Food = () => {
     }
   };
 
+  // In food.tsx, modify the processImage function:
+
   const processImage = async (uri: string) => {
     try {
       setIsLoading(true);
       const endpoint = `${API_URL}ml/predict`;
       console.log("Sending request to:", endpoint);
-
+      console.log("API URL:", process.env.EXPO_PUBLIC_API_URL);
       // Create form data
       const formData = new FormData();
       formData.append("image", {
@@ -85,7 +88,52 @@ const Food = () => {
       const result = await response.json();
       setPrediction(result.category);
       setConfidence(result.confidence);
+
+      // Get token from storage (you might need to import AsyncStorage)
+      const token = await AsyncStorage.getItem("token");
+
+      // Update user state based on food category
+      const updateEndpoint = `${API_URL}auth/me`;
+      const updateResponse = await fetch(updateEndpoint, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          foodCategory: result.category,
+          update: {
+            healthPoints:
+              result.category === "food"
+                ? 10
+                : result.category === "junk_food"
+                ? 5
+                : 0,
+            mood:
+              result.category === "food"
+                ? "happy"
+                : result.category === "junk_food"
+                ? "sad"
+                : undefined,
+          },
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        throw new Error("Failed to update user state");
+      }
+
       await updateArduinoState();
+
+      // Show feedback to user
+      Alert.alert(
+        "Food Detected!",
+        result.category === "food"
+          ? "Healthy food! Your pet's health increased by 10 points and they're happy!"
+          : result.category === "junk_food"
+          ? "Junk food! Your pet's health increased by 5 points but they're sad..."
+          : "This isn't food! Your pet's state remains unchanged."
+      );
     } catch (error) {
       console.error("Error processing image:", error);
       Alert.alert(
