@@ -3,7 +3,8 @@
     "@tensorflow/tfjs-tflite": "^0.0.1-alpha.10",
     "expo-asset": "^11.0.3",
     "express": "^4.21.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "serialport": "^13.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
