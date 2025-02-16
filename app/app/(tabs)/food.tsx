@@ -1,107 +1,199 @@
 // app/(tabs)/food.tsx
-import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Image, StyleSheet, Alert } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  Button,
+  Image,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { MaterialIcons } from "@expo/vector-icons";
 
-export default function FoodScreen() {
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+const CATEGORIES = ["non_food", "food", "junk_food"];
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-  useEffect(() => {
-    openCamera();
-  }, []);
+const Food = () => {
+  const [image, setImage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [prediction, setPrediction] = useState<string | null>(null);
+  const [confidence, setConfidence] = useState<number | null>(null);
 
-  const openCamera = async () => {
+  const pickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Camera Permission Required', 'Please allow camera access.');
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Sorry, we need camera roll permissions to make this work!"
+        );
         return;
       }
 
-      const result = await ImagePicker.launchCameraAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
+        allowsEditing: true,
+        aspect: [1, 1],
         quality: 1,
       });
 
-      if (!result.canceled && result.assets[0].uri) {
-        setPhotoUri(result.assets[0].uri);
-      } else {
-        // If user cancels the camera, they can tap the tab again or you decide the flow
-        setPhotoUri(null);
+      if (!result.canceled) {
+        setImage(result.assets[0].uri);
+        await processImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Camera error:', error);
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image");
     }
   };
 
-  const handleRetake = () => {
-    setPhotoUri(null);
-    openCamera();
-  };
-
-  const handleDone = async () => {
-    if (!photoUri) {
-      Alert.alert('No photo taken', 'Please take a picture first.');
-      return;
-    }
-
+  const processImage = async (uri: string) => {
     try {
+      setIsLoading(true);
+      const endpoint = `${API_URL}ml/predict`;
+      console.log("Sending request to:", endpoint);
+
+      // Create form data
       const formData = new FormData();
-      formData.append('photo', {
-        uri: photoUri,
-        name: 'foodphoto.jpg',
-        type: 'image/jpeg'
+      formData.append("image", {
+        uri: uri,
+        type: "image/jpeg",
+        name: "image.jpg",
       } as any);
 
-      console.log('Sending form data:', formData);
-      const response = await fetch('http://172.20.10.14:4000/api/food/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'multipart/form-data' },
+      // Log the request details
+      console.log("Request details:", {
+        url: endpoint,
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "multipart/form-data",
+        },
         body: formData,
       });
-      const data = await response.json();
-      console.log('Server response:', data);
 
-      Alert.alert('Success', 'Photo uploaded successfully!');
+      // Send to backend for processing
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // Log the response status
+      console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("Prediction result:", result);
+      setPrediction(result.category);
+      setConfidence(result.confidence);
     } catch (error) {
-      console.error('Upload error:', error);
-      Alert.alert('Error', 'Failed to upload image.');
+      console.error("Error processing image:", error);
+      Alert.alert("Error", `Failed to process image: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Food Camera</Text>
-      {photoUri ? (
-        <>
-          <Image source={{ uri: photoUri }} style={styles.preview} />
-          <Button title="Retake" onPress={handleRetake} />
-          <Button title="Done" onPress={handleDone} />
-        </>
-      ) : (
-        <Text>No photo taken yet...</Text>
+      <Text style={styles.title}>Food Detector</Text>
+
+      <Button title="Pick an image" onPress={pickImage} />
+
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text>Processing image...</Text>
+        </View>
+      )}
+
+      {image && (
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: image }} style={styles.image} />
+          {prediction && (
+            <View style={styles.predictionContainer}>
+              <MaterialIcons
+                name={prediction === "food" ? "check-circle" : "error"}
+                size={24}
+                color={
+                  prediction === "food"
+                    ? "green"
+                    : prediction === "junk_food"
+                    ? "orange"
+                    : "red"
+                }
+              />
+              <Text style={styles.predictionText}>
+                This appears to be {prediction.replace("_", " ")}
+                {confidence &&
+                  `\nConfidence: ${(confidence * 100).toFixed(2)}%`}
+              </Text>
+            </View>
+          )}
+        </View>
       )}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    padding: 16 
+  container: {
+    flex: 1,
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#f5f5f5",
   },
-  title: { 
-    fontSize: 20, 
-    marginBottom: 10 
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
   },
-  preview: { 
-    width: 200, 
-    height: 200, 
-    borderWidth: 1, 
-    borderColor: '#ccc', 
-    marginVertical: 10 
-  }
+  imageContainer: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  image: {
+    width: 300,
+    height: 300,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  loadingContainer: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  predictionContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    padding: 10,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  predictionText: {
+    marginLeft: 10,
+    fontSize: 16,
+  },
 });
+
+export default Food;
