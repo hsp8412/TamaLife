@@ -1,26 +1,30 @@
-import { Router, Request, Response } from 'express';
-import { singleFoodUpload, processFoodFile } from '../repos/foodRepo'; 
-// adjust path if needed
+import { Router, Request, Response } from "express";
+import { singleFoodUpload, processFoodFile } from "../repos/foodRepo.js";
 
 const router = Router();
 
 // POST /food
-router.post('/', singleFoodUpload, (req: Request, res: Response) => {
+router.post("/", singleFoodUpload, (req: Request, res: Response) => {
   try {
-    // Multer has already processed the file at this point
+    console.log("Received request with file:", req.file);
+
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded.' });
+      console.log("No file in request");
+      return res.status(400).json({ error: "No file uploaded." });
     }
 
-    // Perform any post-processing logic
-    const result = processFoodFile(req.file);
+    // Process the uploaded file
+    console.log("Processing file...");
+    const processedFile = processFoodFile(req.file);
+    console.log("Processed file result:", processedFile);
 
-    // Send result back to the client
-    return res.json(result);
-
+    return res.json(processedFile);
   } catch (error) {
-    console.error('Error in /food route:', error);
-    return res.status(500).json({ error: 'Internal server error.' });
+    console.error("Error in /food route:", error);
+    return res.status(500).json({
+      error: "Internal server error.",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 });
 
