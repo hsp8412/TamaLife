@@ -4,3 +4,4 @@ python-dotenv
 PyJWT
 flask-bcrypt
 pathlib
+motor
