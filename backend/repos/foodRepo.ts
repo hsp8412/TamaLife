@@ -1,49 +1,85 @@
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { Express } from 'express';  // for type definitions
+import multer, { FileFilterCallback } from "multer";
+import path from "path";
+import fs from "fs";
+import { Request } from "express";
+import { fileURLToPath } from "url";
 
-// 1. Configure the storage destination for uploaded files
+// Types
+interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination: string;
+  filename: string;
+  path: string;
+  buffer: Buffer;
+}
 
-const __dirname = path.resolve();
+// Fix for __dirname in ES modules
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirPath = path.dirname(currentFilePath);
+
+// Create uploads directory path
+const uploadPath = path.join(currentDirPath, "..", "ml", "uploads");
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath, { recursive: true });
+  console.log(`Created uploads directory at: ${uploadPath}`);
+}
+
 const storage = multer.diskStorage({
-  destination: function (_req, _file, cb) {
-    // Construct path to the ml/uploads folder
-    console.log(__dirname);
-    const uploadPath = path.join(__dirname, '/ml/uploads');
-    // Ensure folder exists
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
+  destination: function (
+    _req: Request,
+    _file: MulterFile,
+    cb: (error: Error | null, destination: string) => void
+  ) {
     cb(null, uploadPath);
   },
-  filename: function (_req, file, cb) {
-    // Optional unique suffix to avoid collisions
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  }
+  filename: function (
+    _req: Request,
+    file: MulterFile,
+    cb: (error: Error | null, filename: string) => void
+  ) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
 });
 
-// 2. Create a Multer instance using the above storage config
-const upload = multer({ storage });
+// Add file filter for images
+const fileFilter = (
+  _req: Request,
+  file: MulterFile,
+  cb: FileFilterCallback
+) => {
+  const allowedMimes = ["image/jpeg", "image/png", "image/jpg"];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Invalid file type. Only JPEG and PNG are allowed."));
+  }
+};
 
-// 3. Export the single file upload middleware
-//    This can be used in your route: app.post(..., singleFoodUpload, ...)
-export const singleFoodUpload = upload.single('photo');
+// Create multer instance with configuration
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+});
 
-// 4. Example: Additional processing or business logic
-//    Called AFTER multer has saved the file
-export function processFoodFile(file: Express.Multer.File) {
-  // Here you could do any additional logic, such as:
-  // - log to a database
-  // - call an AI model
-  // - rename the file further
-  // - etc.
+export const singleFoodUpload = upload.single("photo");
 
-  // We'll just return a simple message here
+export function processFoodFile(file: MulterFile) {
+  console.log("Processing file:", file);
   return {
-    message: 'Image received and saved successfully!',
+    message: "Image received and saved successfully!",
     filename: file.filename,
-    path: file.path
+    path: file.path,
+    size: file.size,
+    mimetype: file.mimetype,
   };
 }
