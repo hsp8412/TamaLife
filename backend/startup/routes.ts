@@ -9,6 +9,7 @@ const setupRoutes = (app) => {
   app.use("/api/pet", petRoutes);
   app.use("/api/food", foodRoutes);
   app.use("/api/ml", mlRoutes);
+  app.use("api/todoRoutes", foodRoutes);
 };
 
 export default setupRoutes;
