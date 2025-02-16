@@ -1,0 +1,7 @@
+tensorflow-macos
+tensorflow-metal
+flask
+pillow
+flask-cors
+numpy
+scikit-learn 
