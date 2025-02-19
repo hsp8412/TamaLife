@@ -1,13 +1,14 @@
-import {StyleSheet, Button, View, Text} from "react-native";
-import {useContext, useState} from "react";
-import {AuthContext} from "@/contexts/authContext";
+import { StyleSheet, Button, View, Text } from "react-native";
+import { useContext, useState } from "react";
+import { AuthContext } from "@/contexts/authContext";
 import ProgressBar from "@/components/ProgressBar";
 import HappySprite from "@/components/HappySprite";
 import SadSprite from "@/components/SadSprite";
 import NeutralSprite from "@/components/NeutralSprite";
+import DeadSprite from "@/components/DeadSprite";
 
 export default function HomeScreen() {
-  const {loading, user, logout} = useContext(AuthContext);
+  const { loading, user, logout } = useContext(AuthContext);
   const [testMood, setTestMood] = useState("neutral");
 
   if (loading) {
@@ -18,7 +19,8 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Image Section */}
       <View style={styles.imageContainer}>
-        {(user?.mood === "happy" && <HappySprite />) ||
+        {(user?.healthPoints == 0 && <DeadSprite />) ||
+          (user?.mood === "happy" && <HappySprite />) ||
           (user?.mood === "neutral" && <NeutralSprite />) ||
           (user?.mood === "sad" && <SadSprite />)}
         {/* {
@@ -31,7 +33,9 @@ export default function HomeScreen() {
       </View>
       {/* User Info Section */}
       <View style={styles.infoContainer}>
-        <Text style={styles.moodText}>Mood: {user?.mood ?? "Unknown"}</Text>
+        {user?.healthPoints > 0 && (
+          <Text style={styles.moodText}>Mood: {user?.mood ?? "Unknown"}</Text>
+        )}
         <ProgressBar />
       </View>
 

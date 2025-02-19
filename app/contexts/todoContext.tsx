@@ -22,7 +22,12 @@ export const ToDoProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const fetchTodos = async () => {
-      const data = getTasks();
+      const data = await getTasks();
+      const sortedData = data.sort(
+        (a: Todo, b: Todo) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setTodos(sortedData);
       setLoading(false);
     };
     fetchTodos();
@@ -33,18 +38,7 @@ export const ToDoProvider = ({ children }: { children: ReactNode }) => {
     try {
       const task = await addTask(todo);
       setTodos((todos) => {
-        return [
-          ...todos,
-          task,
-          // {
-          //   _id: task._id,
-          //   userId: task.userId,
-          //   description: task.decription,
-          //   completed: task.completed,
-          //   createdAt: task.create
-          //   updatedAt: new Date(),
-          // },
-        ];
+        return [task, ...todos];
       });
       toastService.success(
         "To-do added!",

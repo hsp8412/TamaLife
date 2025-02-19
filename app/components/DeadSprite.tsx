@@ -1,4 +1,3 @@
-// components/HappySprite.tsx
 import React, { useEffect } from "react";
 import { View, Pressable } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -11,12 +10,14 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 
-const HappySprite = () => {
+const DeadSprite = () => {
   const frame = useSharedValue(0);
   const bounce = useSharedValue(0);
+  const frameWidth = 32;
+  const totalWidth = 32;
 
   useEffect(() => {
-    frame.value = withRepeat(withTiming(3, { duration: 1200 }), -1, false);
+    frame.value = withRepeat(withTiming(0, { duration: 1200 }), -1, false);
   }, []);
 
   const handlePress = async () => {
@@ -38,25 +39,25 @@ const HappySprite = () => {
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
-    left: -32 * Math.round(frame.value),
-    transform: [{ translateY: bounce.value }], // Add bounce transform
+    left: -frameWidth * Math.round(frame.value),
+    transform: [{ translateY: bounce.value }],
   }));
 
   return (
     <Pressable onPress={handlePress}>
       <View
         style={{
-          width: 32,
+          width: frameWidth,
           height: 32,
           overflow: "hidden",
           transform: [{ scale: 4 }],
         }}
       >
         <Animated.Image
-          source={require("@/assets/images/happy.png")}
+          source={require("@/assets/images/dead.png")}
           style={[
             {
-              width: 128,
+              width: totalWidth,
               height: 32,
               position: "absolute",
               top: 0,
@@ -69,4 +70,4 @@ const HappySprite = () => {
   );
 };
 
-export default HappySprite;
+export default DeadSprite;
