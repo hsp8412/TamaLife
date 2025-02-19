@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Create an Axios instance
 const api = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL, // Replace with your actual API base URL
-  timeout: 10000, // 10 seconds timeout
+  // timeout: 10000, // 10 seconds timeout
 });
 
 // Add a request interceptor
@@ -40,9 +40,9 @@ api.interceptors.response.use(
 );
 
 export default {
-  get: axios.get,
-  post: axios.post,
-  put: axios.put,
-  delete: axios.delete,
-  patch: axios.patch,
+  get: api.get,
+  post: api.post,
+  put: api.put,
+  delete: api.delete,
+  patch: api.patch,
 };

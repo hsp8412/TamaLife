@@ -1,4 +1,5 @@
 // app/(tabs)/food.tsx
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useState } from "react";
 import {
   View,
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialIcons } from "@expo/vector-icons";
+import { updateArduinoState } from "@/services/stateService";
 
 const CATEGORIES = ["non_food", "food", "junk_food"];
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -48,13 +50,14 @@ const Food = () => {
     }
   };
 
+  // In food.tsx, modify the processImage function:
+
   const processImage = async (uri: string) => {
     try {
       setIsLoading(true);
       const endpoint = `${API_URL}ml/predict`;
       console.log("Sending request to:", endpoint);
 
-      // Create form data
       const formData = new FormData();
       formData.append("image", {
         uri: uri,
@@ -73,22 +76,71 @@ const Food = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        if (errorText.includes("File too large")) {
-          throw new Error(
-            "Image file is too large. Please try taking another photo."
-          );
-        }
-        throw new Error(`Server error: ${response.status}`);
+        console.error("ML Prediction failed:", errorText);
+        throw new Error(`ML Prediction failed: ${response.status}`);
       }
 
       const result = await response.json();
       setPrediction(result.category);
       setConfidence(result.confidence);
+
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        throw new Error("No auth token found");
+      }
+
+      const updateEndpoint = `${API_URL}auth/me`;
+      const updateResponse = await fetch(updateEndpoint, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          foodCategory: result.category,
+          update: {
+            healthPoints:
+              result.category === "food"
+                ? 10
+                : result.category === "junk_food"
+                ? 5
+                : 0,
+            mood:
+              result.category === "food"
+                ? "happy"
+                : result.category === "junk_food"
+                ? "sad"
+                : "neutral",
+          },
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        const updateErrorText = await updateResponse.text();
+        console.error("Update user failed:", updateErrorText);
+        throw new Error("Failed to update user state");
+      }
+
+      const updateResult = await updateResponse.json();
+      console.log("User update result:", updateResult);
+
+      await updateArduinoState();
+
+      Alert.alert(
+        "Food Detected!",
+        result.category === "food"
+          ? "Healthy food! Your pet's health increased by 10 points and they're happy!"
+          : result.category === "junk_food"
+          ? "Junk food! Your pet's health increased by 5 points but they're sad..."
+          : "This isn't food! Your pet's state remains unchanged."
+      );
     } catch (error) {
       console.error("Error processing image:", error);
       Alert.alert(
         "Error",
-        error.message || "Failed to process image. Please try again."
+        error instanceof Error
+          ? error.message
+          : "Failed to process image. Please try again."
       );
     } finally {
       setIsLoading(false);

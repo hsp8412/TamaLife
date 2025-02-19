@@ -3,12 +3,16 @@ import {Stack} from "expo-router";
 import React from "react";
 import {useContext} from "react";
 
-function ProtectedRoutes() {
+export default function ProtectedRoutes() {
   const {loading, user} = useContext(AuthContext);
-
   return (
-    <Stack>
-      {user ? (
+    <Stack
+      screenOptions={{
+        headerShown: true,
+        headerTitle: "Tama Life",
+      }}
+    >
+      {false ? (
         <>
           <Stack.Screen name="(tabs)" options={{headerShown: false}} />
           <Stack.Screen name="+not-found" />

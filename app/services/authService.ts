@@ -2,6 +2,7 @@ import httpService from "./httpService";
 
 export const Userlogin = async (email: string, password: string) => {
   const res = await httpService.post("auth", {email, password});
+  console.log(res);
   return res.data;
 };
 

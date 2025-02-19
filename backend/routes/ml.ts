@@ -142,6 +142,7 @@ router.get("/model/metadata", async (req: Request, res: Response) => {
 
     res.json(metadata);
   } catch (error) {
+    console.log("here");
     res.status(500).json({
       error: "Failed to get model metadata",
       details: error instanceof Error ? error.message : String(error),
@@ -183,6 +184,7 @@ router.post(
       res.json(classification);
     } catch (error) {
       console.error("Classification error:", error);
+      console.log("here2");
       res.status(500).json({
         error: "Classification failed",
         details: error instanceof Error ? error.message : String(error),
@@ -238,6 +240,7 @@ const runPythonScript = async (
           JSON.parse(result);
           resolve(result);
         } catch (e) {
+          console.log("here4");
           reject(new Error(`Invalid JSON output: ${result}`));
         }
       } else {
@@ -261,6 +264,7 @@ const cleanupFile = async (filePath: string): Promise<void> => {
   try {
     await fs.unlink(filePath);
   } catch (error) {
+    console.log("here3");
     console.error(`Failed to cleanup file ${filePath}:`, error);
   }
 };
